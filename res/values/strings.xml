@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Proximity Recalibrator</string>
+    <string name="lt_value">0</string>
+    <string name="ht_value">255</string>
+    <string name="apply">Start</string>
+    <string name="runatboot">Apply at Boot</string>
+    <string name="prox_value">Not running</string>
+    <string name="lt_label">Low Threshold</string>
+    <string name="ht_label">High Threshold</string>
+    <string name="ork">Proximity sensor monitor:</string>
+    <string name="title">DHD Proximity Sensor Recalibrator by leppie</string>
+    <string name="buybeer">Buy me a beer</string>
+    <string name="empty"> </string>
+</resources>
