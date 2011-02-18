@@ -301,7 +301,7 @@ public class PSCalibrator extends Activity implements SensorEventListener
       public void onClick(View v)
       {
         Uri uri = Uri.parse("https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=xacc.ide@gmail.com" + 
-            "&item_name=DHD%20Proximity%20Recalibrator&no_shipping=1&currency_code=USD" );
+            "&item_name=DHD%20Proximity%20Recalibrator&no_shipping=1&amount=2&currency_code=USD" );
         startActivity(new Intent( Intent.ACTION_VIEW, uri ) );
       }
     });
