@@ -4,7 +4,10 @@ import java.util.*;
 import java.io.*;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -25,15 +28,27 @@ class Calibration
   static int x = -1;
   static int a = -1;
   
+  static final String TAG = "DHD Proximity Recalibrator"; 
+  
   public static void applyAndSave(Context ctx, int lt, int ht)
   {
     SharedPreferences prefs = ctx.getSharedPreferences("PSCalibration", 0);
     Editor edit = prefs.edit();
-    edit.putInt("LT", lt);
-    edit.putInt("HT", ht);
+    
+    if (lt < 0 || ht < 0)
+    {
+      edit.remove("LT");
+      edit.remove("HT");
+    }
+    else
+    {
+      edit.putInt("LT", lt);
+      edit.putInt("HT", ht);
+    }
+
     edit.commit();
     
-    Log.i("saving values:", lt + " " + ht);
+    Log.i(TAG, "saving values: " + lt + " " + ht);
     
     apply(lt, ht);
   }
@@ -44,14 +59,20 @@ class Calibration
     lt = ltv;
     ht = htv;
     
-    Log.i("Calibration", lt + " " + ht);
+    if (lt < 0 || ht < 0)
+    {
+      Log.i(TAG, "Calibration: skipping: "+ lt + " " + ht);
+      return;
+    }
+    
+    Log.i(TAG, "Calibration: applying: " + lt + " " + ht);
     
     int p1 = (0x5053 << 16) + ((lt & 0xff) << 8) + (ht & 0xff);
     int p2 = (a << 24) + (x << 16) + ((lt & 0xff) << 8) + (ht & 0xff);
     
     String output = "0x" + Integer.toHexString(p1) + " 0x" + Integer.toHexString(p2);
     
-    Log.i("Writing", output);
+    Log.i(TAG, "Writing to ps_kadc: " + output);
     
     FileWriter fw;
 
@@ -65,8 +86,7 @@ class Calibration
     }
     catch (IOException e)
     {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      Log.e(TAG, "Error when writing to ps_kadc", e.getCause());
     }
   }
   
@@ -82,7 +102,7 @@ class Calibration
     int lt = prefs.getInt("LT", -1);
     int ht = prefs.getInt("HT", -1);
     
-    Log.i("loading values:", lt + " " + ht);
+    Log.i(TAG, "loading values: " + lt + " " + ht);
     
     if (!(lt < 0 || ht < 0))
     {
@@ -116,7 +136,9 @@ class Calibration
       FileReader fr = new FileReader(ps_kadc);
       char[] buf = new char[256];
       int len = fr.read(buf);
-      StringTokenizer tokens = new StringTokenizer(new String(buf, 0, len), "=");
+      String str = new String(buf, 0, len);
+      Log.i(TAG, "Reading from ps_kadc: " + str);
+      StringTokenizer tokens = new StringTokenizer(str, "=");
       tokens.nextToken();
       String values = tokens.nextToken().trim();
       values = values.substring(1, values.length() - 1);
@@ -139,13 +161,11 @@ class Calibration
     
     catch (FileNotFoundException e)
     {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      Log.e(TAG, "ps_kadc file not found", e.getCause());
     }
     catch (IOException e)
     {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      Log.e(TAG, "Error reading ps_kadc", e.getCause());
     }
   }
 }
@@ -310,11 +330,18 @@ public class PSCalibrator extends Activity implements SensorEventListener
     int lt = Calibration.getLT();
     int ht = Calibration.getHT();
     
-    lt_value.setText(new Integer(lt).toString());
-    ht_value.setText(new Integer(ht).toString());
-    
-    ltslider.setProgress(lt);
-    htslider.setProgress(ht);
+    if (lt < 0 || ht < 0)
+    {
+      Toast.makeText(context, "Program not working correctly, check logcat", Toast.LENGTH_LONG).show();
+    }
+    else
+    {
+      lt_value.setText(new Integer(lt).toString());
+      ht_value.setText(new Integer(ht).toString());
+      
+      ltslider.setProgress(lt);
+      htslider.setProgress(ht);
+    }
   }
   
   @Override
@@ -331,8 +358,8 @@ public class PSCalibrator extends Activity implements SensorEventListener
   @Override
   public void onSensorChanged(SensorEvent event)
   {
-    String pval =  event.values[0] == 0.0 ? "NEAR" : "FAR";
-    Log.i("Proximity changed", pval);
+    float val = event.values[0]; 
+    String pval =  val == 0.0 ? "NEAR" : val > 0 ?  "FAR" : "UKNOWN";
     setPSStatus(pval);
   }
   
