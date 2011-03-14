@@ -5,9 +5,7 @@ import java.io.*;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
 import android.content.Context;
-import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -30,6 +28,9 @@ class Calibration
   
   static final String TAG = "DHD Proximity Recalibrator"; 
   
+  public static String LastMessage;
+  public static Throwable LastError;
+  
   public static void applyAndSave(Context ctx, int lt, int ht)
   {
     SharedPreferences prefs = ctx.getSharedPreferences("PSCalibration", 0);
@@ -51,6 +52,8 @@ class Calibration
     Log.i(TAG, "saving values: " + lt + " " + ht);
     
     apply(lt, ht);
+    
+    ShowError(ctx);
   }
   
   static void apply(int ltv, int htv)
@@ -86,7 +89,10 @@ class Calibration
     }
     catch (IOException e)
     {
-      Log.e(TAG, "Error when writing to ps_kadc", e.getCause());
+      lt = -1; ht = -1;
+      LastError = e;
+      LastMessage = "Error when writing to ps_kadc";
+      Log.e(TAG, LastMessage, LastError);
     }
   }
   
@@ -108,6 +114,31 @@ class Calibration
     {
       applyAndNotify(ctx, lt, ht);
     }
+  }
+  
+  static String Prettify(Throwable e)
+  {
+    StringBuilder sb = new StringBuilder(e.toString());
+    for (StackTraceElement se : e.getStackTrace())
+    {
+      sb.append("\n" + se.toString());
+    }
+    return sb.toString();
+  }
+  
+  public static boolean ShowError(Context ctx)
+  {
+    if (LastError != null)
+    {
+      AlertDialog alertDialog = new AlertDialog.Builder(ctx).create();
+      alertDialog.setTitle(LastMessage);
+      alertDialog.setMessage(Prettify(LastError));
+      alertDialog.show();
+      LastMessage = null;
+      LastError = null;
+      return true;
+    }
+    return false;
   }
   
   public static int getLT()
@@ -161,11 +192,17 @@ class Calibration
     
     catch (FileNotFoundException e)
     {
-      Log.e(TAG, "ps_kadc file not found", e.getCause());
+      lt = -1; ht = -1;
+      LastError = e;
+      LastMessage = "ps_kadc file not found";
+      Log.e(TAG, LastMessage, LastError);
     }
     catch (IOException e)
     {
-      Log.e(TAG, "Error reading ps_kadc", e.getCause());
+      lt = -1; ht = -1;
+      LastError = e;
+      LastMessage = "Error reading ps_kadc";
+      Log.e(TAG, LastMessage, LastError);
     }
   }
 }
@@ -177,6 +214,8 @@ public class PSCalibrator extends Activity implements SensorEventListener
   SensorEventListener psevent;
   Context context;
   boolean running = false;
+  
+
 
   /** Called when the activity is first created. */
   @Override
@@ -185,7 +224,7 @@ public class PSCalibrator extends Activity implements SensorEventListener
     super.onCreate(savedInstanceState);
     setContentView(R.layout.main);
     
-    context = getApplicationContext();
+    context = this;
     psevent = this;
     
     sensormanager = (SensorManager)getSystemService(SENSOR_SERVICE);
@@ -330,17 +369,26 @@ public class PSCalibrator extends Activity implements SensorEventListener
     int lt = Calibration.getLT();
     int ht = Calibration.getHT();
     
-    if (lt < 0 || ht < 0)
+    if (Calibration.ShowError(this))
     {
-      Toast.makeText(context, "Program not working correctly, check logcat", Toast.LENGTH_LONG).show();
     }
     else
     {
-      lt_value.setText(new Integer(lt).toString());
-      ht_value.setText(new Integer(ht).toString());
-      
-      ltslider.setProgress(lt);
-      htslider.setProgress(ht);
+      if (lt < 0 || ht < 0)
+      {
+        AlertDialog alertDialog = new AlertDialog.Builder(this).create();
+        alertDialog.setTitle("Error");
+        alertDialog.setMessage("Program not working correctly, check logcat");
+        alertDialog.show();
+      }
+      else
+      {
+        lt_value.setText(new Integer(lt).toString());
+        ht_value.setText(new Integer(ht).toString());
+        
+        ltslider.setProgress(lt);
+        htslider.setProgress(ht);
+      }
     }
   }
   
