@@ -74,7 +74,6 @@
 					android:layout_width="200dip" android:gravity="center"
 					android:textSize="11pt"></TextView>
 			</LinearLayout>
-			<Button android:text="@string/buybeer" android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/beerbut"></Button>
 		</TableRow>
 	</TableLayout>
 </LinearLayout>

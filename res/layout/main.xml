@@ -80,10 +80,8 @@
 			</LinearLayout>
 		</TableRow>
 		<TableRow android:layout_height="wrap_content" android:id="@+id/tableRow10" android:layout_width="200dip">
-			<TextView android:id="@+id/textView5" android:text="@string/empty" android:layout_height="wrap_content" android:layout_width="wrap_content" android:textSize="18pt"></TextView>
 		</TableRow>
 		<TableRow android:id="@+id/tableRow11" android:layout_width="wrap_content" android:layout_height="wrap_content">
-			<Button android:text="@string/buybeer" android:layout_height="wrap_content" android:layout_width="100dip" android:id="@+id/beerbut"></Button>
 		</TableRow>
 	</TableLayout>
 </LinearLayout>

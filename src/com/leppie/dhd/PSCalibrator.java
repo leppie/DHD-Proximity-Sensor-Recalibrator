@@ -6,11 +6,10 @@ import java.io.*;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
-import android.content.Intent;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.hardware.*;
-import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -20,7 +19,8 @@ import android.widget.SeekBar.OnSeekBarChangeListener;
 
 class Calibration
 {
-  static final String ps_kadc = "/sys/devices/virtual/optical_sensors/proximity/ps_kadc"; 
+  static final String ps_kadc = "/sys/devices/virtual/optical_sensors/proximity/ps_kadc";
+  static final String ps_polling_ignore = "/sys/devices/virtual/optical_sensors/proximity/ps_polling_ignore"; 
   static int lt = -1;
   static int ht = -1;
   static int x = -1;
@@ -160,7 +160,7 @@ class Calibration
   }
   
   @SuppressWarnings("unused")
-  static void getValues()
+  public static void getValues()
   {
     try
     {
@@ -205,6 +205,60 @@ class Calibration
       Log.e(TAG, LastMessage, LastError);
     }
   }
+  
+  public static boolean Initialize(LinkedList<String> errors)
+  {
+    File f_ps_kadc = new File(ps_kadc);
+    File f_ps_polling_ignore = new File(ps_polling_ignore);
+    
+    if (!f_ps_kadc.exists()) 
+    {
+      errors.add("- ps_kadc not found");
+      return false;
+    }
+    if (!f_ps_polling_ignore.exists()) 
+    {
+      errors.add("- ps_polling_ignore not found");
+      return false;
+    }
+    
+    if (!f_ps_kadc.canWrite())
+    {
+      // super user?
+      errors.add("- ps_kadc not writable");
+      return false;
+    }
+    
+    if (!f_ps_polling_ignore.canWrite())
+    {
+      // super user?
+      errors.add("- ps_polling_ignore not writable");
+      return false;
+    }
+    else
+    {
+      // disable polling
+      try
+      {
+        DisablePolling();
+      }
+      catch (IOException e)
+      {
+        errors.add(e.getMessage());
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  public static void DisablePolling()
+      throws IOException
+  {
+    FileWriter fw = new FileWriter(ps_polling_ignore);
+    fw.write("0");
+    fw.close();
+  }
 }
 
 public class PSCalibrator extends Activity implements SensorEventListener
@@ -223,6 +277,32 @@ public class PSCalibrator extends Activity implements SensorEventListener
   {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.main);
+
+    LinkedList<String> errors = new LinkedList<String>();
+    
+    if (!Calibration.Initialize(errors))
+    {
+      AlertDialog alertDialog = new AlertDialog.Builder(this).create();
+      alertDialog.setTitle("Kernel not supported");
+      StringBuilder sb = new StringBuilder("Please use the latest CM7 kernel\nErrors:\n");
+      for (String er : errors)
+      {
+        sb.append(er + "\n");
+      }
+      alertDialog.setMessage(sb.toString());
+      final Activity app = this;
+      alertDialog.setButton("Quit", new DialogInterface.OnClickListener()
+      {
+        @Override
+        public void onClick(DialogInterface dialog, int which)
+        {
+          app.finish();
+        }
+      });
+      
+      alertDialog.show();
+      return;
+    }
     
     context = this;
     psevent = this;
@@ -243,12 +323,14 @@ public class PSCalibrator extends Activity implements SensorEventListener
           sensormanager.unregisterListener(psevent);
           setPSStatus("Not running");
           applybut.setText("Start");
+          UpdateCalibrationValues();
         }
         else
         {
           sensormanager.registerListener(psevent, ps, SensorManager.SENSOR_DELAY_FASTEST);
           setPSStatus("Waiting for reading");
           applybut.setText("Stop");
+          UpdateCalibrationValues();
         }
         running = !running;
       }
@@ -352,20 +434,6 @@ public class PSCalibrator extends Activity implements SensorEventListener
       }
     });
     
-    Button b = (Button) findViewById(R.id.beerbut);
-    
-    b.setOnClickListener(new OnClickListener()
-    {
-      @Override
-      public void onClick(View v)
-      {
-        Uri uri = Uri.parse("https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=xacc.ide@gmail.com" + 
-            "&item_name=DHD%20Proximity%20Recalibrator&no_shipping=1&currency_code=USD" );
-        startActivity(new Intent( Intent.ACTION_VIEW, uri ) );
-      }
-    });
-    
-    
     int lt = Calibration.getLT();
     int ht = Calibration.getHT();
     
@@ -383,13 +451,30 @@ public class PSCalibrator extends Activity implements SensorEventListener
       }
       else
       {
-        lt_value.setText(new Integer(lt).toString());
-        ht_value.setText(new Integer(ht).toString());
-        
-        ltslider.setProgress(lt);
-        htslider.setProgress(ht);
+        UpdateCalibrationValues(lt, ht);
       }
     }
+  }
+  
+  void UpdateCalibrationValues(int lt, int ht)
+  {
+    SeekBar ltslider = (SeekBar) findViewById(R.id.lt_slider);
+    SeekBar htslider = (SeekBar) findViewById(R.id.ht_slider);
+    
+    TextView lt_value = (TextView) findViewById(R.id.lt_value);
+    TextView ht_value = (TextView) findViewById(R.id.ht_value);
+    
+    lt_value.setText(new Integer(lt).toString());
+    ht_value.setText(new Integer(ht).toString());
+    
+    ltslider.setProgress(lt);
+    htslider.setProgress(ht);
+  }
+  
+  void UpdateCalibrationValues()
+  {
+    Calibration.getValues();
+    UpdateCalibrationValues(Calibration.getLT(), Calibration.getHT());
   }
   
   @Override
@@ -409,6 +494,8 @@ public class PSCalibrator extends Activity implements SensorEventListener
     float val = event.values[0]; 
     String pval =  val == 0.0 ? "NEAR" : val > 0 ?  "FAR" : "UKNOWN";
     setPSStatus(pval);
+    
+    UpdateCalibrationValues();
   }
   
 }

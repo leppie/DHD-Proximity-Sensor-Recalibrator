@@ -15,7 +15,6 @@ public final class R {
     }
     public static final class id {
         public static final int applyBut=0x7f050017;
-        public static final int beerbut=0x7f05001c;
         public static final int gridView1=0x7f050004;
         public static final int gridView2=0x7f05000c;
         public static final int gridView3=0x7f050016;
@@ -29,7 +28,7 @@ public final class R {
         public static final int tableLayout1=0x7f050000;
         public static final int tableRow1=0x7f050007;
         public static final int tableRow10=0x7f050019;
-        public static final int tableRow11=0x7f05001b;
+        public static final int tableRow11=0x7f05001a;
         public static final int tableRow2=0x7f05000f;
         public static final int tableRow3=0x7f050013;
         public static final int tableRow4=0x7f050015;
@@ -42,7 +41,6 @@ public final class R {
         public static final int textView2=0x7f05000d;
         public static final int textView3=0x7f050014;
         public static final int textView4=0x7f050002;
-        public static final int textView5=0x7f05001a;
     }
     public static final class layout {
         public static final int main=0x7f030000;
@@ -50,8 +48,7 @@ public final class R {
     public static final class string {
         public static final int app_name=0x7f040000;
         public static final int apply=0x7f040003;
-        public static final int buybeer=0x7f04000a;
-        public static final int empty=0x7f04000b;
+        public static final int empty=0x7f04000a;
         public static final int ht_label=0x7f040007;
         public static final int ht_value=0x7f040002;
         public static final int lt_label=0x7f040006;
