@@ -206,6 +206,31 @@ class Calibration
     }
   }
   
+  static boolean FixPermissions(String filename, LinkedList<String> errors)
+  {
+    try
+    {
+      Process p = Runtime.getRuntime().exec("su");
+      DataOutputStream s = new DataOutputStream(p.getOutputStream());
+      s.writeBytes("chmod 0666 " + filename + "\n");
+      s.flush();
+      s.writeBytes("exit\n");
+      s.flush();
+      p.waitFor();
+      return true;
+    }
+    catch (IOException e)
+    {
+      errors.add(e.getMessage());
+      return false;
+    }
+    catch (InterruptedException e)
+    {
+      errors.add(e.getMessage());
+      return false;
+    }
+  }
+  
   public static boolean Initialize(LinkedList<String> errors)
   {
     File f_ps_kadc = new File(ps_kadc);
@@ -225,28 +250,42 @@ class Calibration
     if (!f_ps_kadc.canWrite())
     {
       // super user?
-      errors.add("- ps_kadc not writable");
-      return false;
+      if (!FixPermissions(ps_kadc, errors))
+      {
+        return false;
+      }
+
+      if (!f_ps_kadc.canWrite())
+      {
+        errors.add("- ps_kadc not writable");
+        return false;
+      }
     }
     
     if (!f_ps_polling_ignore.canWrite())
     {
       // super user?
-      errors.add("- ps_polling_ignore not writable");
-      return false;
-    }
-    else
-    {
-      // disable polling
-      try
+      if (!FixPermissions(ps_polling_ignore, errors))
       {
-        DisablePolling();
-      }
-      catch (IOException e)
-      {
-        errors.add(e.getMessage());
         return false;
       }
+      
+      if (!f_ps_polling_ignore.canWrite())
+      {
+        errors.add("- ps_polling_ignore not writable");
+        return false;
+      }
+    }
+    
+    // disable polling
+    try
+    {
+      DisablePolling();
+    }
+    catch (IOException e)
+    {
+      errors.add(e.getMessage());
+      return false;
     }
     
     return true;
@@ -284,7 +323,7 @@ public class PSCalibrator extends Activity implements SensorEventListener
     {
       AlertDialog alertDialog = new AlertDialog.Builder(this).create();
       alertDialog.setTitle("Kernel not supported");
-      StringBuilder sb = new StringBuilder("Please use the latest CM7 kernel\nErrors:\n");
+      StringBuilder sb = new StringBuilder();
       for (String er : errors)
       {
         sb.append(er + "\n");
