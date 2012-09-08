@@ -308,7 +308,19 @@ public class PSCalibrator extends Activity implements SensorEventListener
   Context context;
   boolean running = false;
   
-
+  @Override
+  public void onPause()
+  {
+    if (running)
+    {
+      sensormanager.unregisterListener(psevent);
+      setPSStatus("Not running");
+      ((Button) findViewById(R.id.applyBut)).setText("Start");
+      UpdateCalibrationValues();
+      running = false;
+    }
+    super.onPause();
+  }
 
   /** Called when the activity is first created. */
   @Override
